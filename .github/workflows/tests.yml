@@ -22,4 +22,4 @@ jobs:
         pip install selenium pytest webdriver-manager
 
     - name: Run tests
-      run: pytest
+      run: pytest autotests
