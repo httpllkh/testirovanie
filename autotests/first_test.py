@@ -1,5 +1,25 @@
+import pytest
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+
+@pytest.fixture
+def browser():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver.get("http://localhost:8000")
+    driver.maximize_window()
+    yield driver
+    driver.quit()
 
 def test_card_input_length(browser):
     card_input = WebDriverWait(browser, 5).until(
@@ -26,3 +46,18 @@ def test_negative_amount_allowed(browser):
     amount_input.send_keys("-1000")
     value = amount_input.get_attribute("value")
     assert "-" in value
+
+def test_currency_blocks_present(browser):
+    page_source = browser.page_source
+    assert "Рубли" in page_source
+    assert "Доллары" in page_source
+    assert "Евро" in page_source
+
+def test_transfer_with_zero_balance(browser):
+    transfer_button = WebDriverWait(browser, 5).until(
+        EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Перевести")]'))
+    )
+    transfer_button.click()
+    time.sleep(1)
+    page_source = browser.page_source
+    assert "ошибк" in page_source.lower() or "нельзя" in page_source.lower()
